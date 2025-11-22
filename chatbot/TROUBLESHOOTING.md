@@ -78,3 +78,4 @@ Restart chatbot dev server after creating/updating `.env`.
 - [ ] No CORS errors in console
 - [ ] `chatbot/.env` has `VITE_API_URL=http://localhost:5000/api`
 
+
