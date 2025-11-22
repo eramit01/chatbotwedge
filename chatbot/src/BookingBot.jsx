@@ -1,15 +1,54 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { MessageCircle, X, Send, CheckCircle2, Clock, ArrowLeft, Loader2, Percent, Calendar, ListChecks } from 'lucide-react';
+// Universal default bot image - always accessible via public folder
+const DEFAULT_BOT_IMAGE = "/default-bot.png";
+
+// Import fallback bot images - Vite will process these correctly (backup fallbacks)
 import bot1 from '../botimg/1.png';
 import bot2 from '../botimg/2.png';
 import bot3 from '../botimg/3.png';
+
+// Fallback bot images array (backup if default-bot.png fails)
+const FALLBACK_IMAGES = [bot1, bot2, bot3];
+const getFallbackImage = (index) => {
+  return FALLBACK_IMAGES[index] || FALLBACK_IMAGES[0];
+};
+
+// Universal safe bot image resolver
+const getSafeBotImage = (botImageFromConfig) => {
+  // If botImage is null, undefined, or empty string, use default
+  if (!botImageFromConfig || botImageFromConfig.trim() === "") {
+    return DEFAULT_BOT_IMAGE;
+  }
+  return botImageFromConfig;
+};
+
+// Universal image error handler - tries fallback images before showing initial
+const createImageErrorHandler = (botImageValue, botNameValue) => (e) => {
+  // If default image fails, try imported fallback
+  if (botImageValue === DEFAULT_BOT_IMAGE || (typeof botImageValue === 'string' && botImageValue.includes('default-bot.png'))) {
+    const fallbackImg = getFallbackImage(0);
+    if (e.target.src !== fallbackImg) {
+      e.target.src = fallbackImg;
+      return;
+    }
+  }
+  // If all images fail, show initial
+  e.target.style.display = 'none';
+  const fallback = e.target.parentElement;
+  const isWhiteBg = fallback.className.includes('bg-white') || fallback.className.includes('bg-gradient');
+  const textColor = isWhiteBg ? 'text-[#814157]' : 'text-white';
+  const fontSize = 'text-base xs:text-lg sm:text-xl';
+  fallback.className = fallback.className.replace('overflow-hidden', '');
+  fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full ${textColor} font-bold ${fontSize}">${botNameValue.charAt(0)}</span>`;
+};
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // Random girl names for the bot (fallback)
 const GIRL_NAMES = ['Priya', 'Ananya', 'Kavya', 'Sneha', 'Meera', 'Riya', 'Aisha', 'Neha', 'Divya', 'Shreya'];
-const FALLBACK_AVATARS = [bot1, bot2, bot3];
+const FALLBACK_AVATARS = [getFallbackImage(0), getFallbackImage(1), getFallbackImage(2)];
 
 const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName: externalBotName, botImage: externalBotImage }) => {
   const [isOpen, setIsOpen] = useState(externalIsOpen || false);
@@ -17,7 +56,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
   const [spaConfig, setSpaConfig] = useState(null);
   const [status, setStatus] = useState("loading");
   const [botName, setBotName] = useState(externalBotName || '');
-  const [botImage, setBotImage] = useState(externalBotImage || bot1);
+  const [botImage, setBotImage] = useState(externalBotImage ? getSafeBotImage(externalBotImage) : DEFAULT_BOT_IMAGE);
   const [currentView, setCurrentView] = useState('welcome'); // welcome, services, booking, success
   const [selectedServices, setSelectedServices] = useState([]);
   const [bookingData, setBookingData] = useState({
@@ -58,7 +97,34 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
         
         // Resolve bot name and image
         const resolvedBotName = data.botName || GIRL_NAMES[Math.floor(Math.random() * GIRL_NAMES.length)];
-        const resolvedBotImage = data.botImage || FALLBACK_AVATARS[Math.floor(Math.random() * FALLBACK_AVATARS.length)];
+        
+        // Universal safe bot image resolution
+        // Use the safe resolver which handles null, undefined, and empty strings
+        let resolvedBotImage = getSafeBotImage(data.botImage);
+        
+        // If we got a non-default image, validate and resolve the URL
+        if (resolvedBotImage !== DEFAULT_BOT_IMAGE) {
+          try {
+            // If it's already an absolute URL (http/https)
+            if (resolvedBotImage.startsWith('http://') || resolvedBotImage.startsWith('https://')) {
+              const testUrl = new URL(resolvedBotImage);
+              resolvedBotImage = testUrl.href;
+            } else if (resolvedBotImage.startsWith('/')) {
+              // It's an absolute path - make it full URL using chatbot's origin
+              resolvedBotImage = `${window.location.origin}${resolvedBotImage}`;
+            } else {
+              // It's a relative path - make it absolute
+              resolvedBotImage = `${window.location.origin}/${resolvedBotImage}`;
+            }
+            console.log('[SpaBot] Resolved botImage URL:', resolvedBotImage);
+          } catch (e) {
+            // Invalid URL, use default
+            console.warn('[SpaBot] Invalid botImage URL, using default:', data.botImage, e);
+            resolvedBotImage = DEFAULT_BOT_IMAGE;
+          }
+        } else {
+          console.log('[SpaBot] Using default bot image:', DEFAULT_BOT_IMAGE);
+        }
         
         setBotName(resolvedBotName);
         setBotImage(resolvedBotImage);
@@ -73,6 +139,14 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
         }
       } catch (error) {
         console.error("[SpaBot] Error fetching config:", error);
+        console.error("[SpaBot] Error details:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          url: url,
+          spaId: spaId,
+          apiBase: API_BASE
+        });
         setStatus("error");
       }
     };
@@ -304,7 +378,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
 
   if (status === "loading") {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6" style={{ zIndex: 2147483647 }}>
         <div className="bg-white rounded-full p-4 shadow-lg">
           <Loader2 className="animate-spin text-[#814157]" size={24} />
         </div>
@@ -314,13 +388,16 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
 
   if (status === "error" || !spaConfig) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 bg-white rounded-2xl p-6 shadow-2xl max-w-sm">
-        <p className="text-gray-800 font-semibold">Chat temporarily unavailable</p>
-        {process.env.NODE_ENV === "development" && (
-          <div style={{ fontSize: "10px", marginTop: "8px", color: "#999" }}>
-            Debug: spaId={spaId || "missing"}, API={API_BASE}
-          </div>
-        )}
+      <div className="fixed bottom-6 right-6 bg-white rounded-2xl p-6 shadow-2xl max-w-sm border border-red-200" style={{ zIndex: 2147483647 }}>
+        <p className="text-gray-800 font-semibold mb-2">Chat temporarily unavailable</p>
+        <div style={{ fontSize: "11px", marginTop: "8px", color: "#666" }}>
+          <p className="mb-1"><strong>Debug Info:</strong></p>
+          <p>spaId: {spaId || "❌ missing"}</p>
+          <p>API: {API_BASE}</p>
+          <p className="mt-2 text-xs text-gray-500">
+            Check browser console (F12) for details
+          </p>
+        </div>
       </div>
     );
   }
@@ -331,7 +408,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
     <>
       {/* Enhanced Popup Notification */}
       {showPopup && !isOpen && (
-        <div className="fixed bottom-24 left-6 z-50 animate-fade-in">
+        <div className="fixed bottom-24 left-6 animate-fade-in" style={{ zIndex: 2147483647 }}>
           <div className="bg-white rounded-2xl shadow-2xl p-5 max-w-sm border border-gray-200 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full blur-2xl opacity-50"></div>
             
@@ -349,11 +426,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
                     src={botImage} 
                     alt={botName}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      const fallback = e.target.parentElement;
-                      fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-white font-bold text-lg">${botName.charAt(0)}</span>`;
-                    }}
+                    onError={createImageErrorHandler(botImage, botName)}
                   />
                 </div>
                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-sm animate-pulse"></div>
@@ -393,7 +466,8 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
       {!isOpen && externalIsOpen === undefined && (
         <button
           onClick={handleOpenChat}
-          className="fixed bottom-6 left-6 z-50 bg-white text-white p-0 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 active:scale-95"
+          className="fixed bottom-6 left-6 bg-white text-white p-0 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 active:scale-95"
+          style={{ zIndex: 2147483647 }}
           title="Chat with Booking Assistant"
           aria-label="Open booking chat"
         >
@@ -402,11 +476,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
               src={botImage} 
               alt={botName}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                const fallback = e.target.parentElement;
-                fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-[#814157] font-bold text-lg">${botName.charAt(0)}</span>`;
-              }}
+              onError={createImageErrorHandler(botImage, botName)}
             />
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse shadow"></div>
           </div>
@@ -415,7 +485,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
 
       {/* Enhanced Chat Window - Fully Responsive */}
       {isOpen && (
-        <div className="fixed top-2 left-2 right-2 bottom-2 xs:top-4 xs:left-4 xs:right-4 xs:bottom-4 sm:inset-auto sm:bottom-6 sm:right-6 sm:left-auto sm:top-auto z-50 sm:w-full sm:max-w-md sm:h-[85vh] sm:max-h-[700px] bg-white rounded-xl xs:rounded-2xl shadow-2xl flex flex-col border border-gray-200 overflow-hidden">
+        <div className="fixed top-2 left-2 right-2 bottom-2 xs:top-4 xs:left-4 xs:right-4 xs:bottom-4 sm:inset-auto sm:bottom-6 sm:right-6 sm:left-auto sm:top-auto sm:w-full sm:max-w-md sm:h-[85vh] sm:max-h-[700px] bg-white rounded-xl xs:rounded-2xl shadow-2xl flex flex-col border border-gray-200 overflow-hidden" style={{ zIndex: 2147483647 }}>
           {/* Enhanced Chat Header */}
           <div className="bg-[#814157] text-white p-3 xs:p-4 sm:p-5 flex items-center justify-between shadow-lg border-b border-white/10">
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -425,12 +495,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
                     src={botImage} 
                     alt={botName}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      const fallback = e.target.parentElement;
-                      fallback.className = fallback.className.replace('overflow-hidden', '');
-                      fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-white font-bold text-base xs:text-lg sm:text-xl">${botName.charAt(0)}</span>`;
-                    }}
+                    onError={createImageErrorHandler(botImage, botName)}
                   />
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-green-500 rounded-full border-[2.5px] sm:border-[3px] border-[#814157] shadow-lg animate-pulse z-20 ring-1 ring-green-400/30"></div>
@@ -463,12 +528,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
                       src={botImage} 
                       alt={botName}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.parentElement;
-                        fallback.className = fallback.className.replace('overflow-hidden', '');
-                        fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-white font-semibold text-xs xs:text-sm sm:text-base">${botName.charAt(0)}</span>`;
-                      }}
+                      onError={createImageErrorHandler(botImage, botName)}
                     />
                   </div>
                   <div className="bg-white rounded-xl xs:rounded-2xl sm:rounded-3xl p-3 xs:p-4 sm:p-5 shadow-lg max-w-[92%] xs:max-w-[90%] sm:max-w-[85%] border border-gray-100/80">
@@ -558,12 +618,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
                       src={botImage} 
                       alt={botName}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.parentElement;
-                        fallback.className = fallback.className.replace('overflow-hidden', '');
-                        fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-white font-bold text-xs xs:text-sm">${botName.charAt(0)}</span>`;
-                      }}
+                      onError={createImageErrorHandler(botImage, botName)}
                     />
                   </div>
                   <div className="bg-white rounded-xl xs:rounded-2xl p-2.5 xs:p-3 sm:p-4 shadow-md max-w-[92%] xs:max-w-[90%] sm:max-w-[85%] border border-gray-100">
@@ -684,12 +739,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
                       src={botImage} 
                       alt={botName}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.parentElement;
-                        fallback.className = fallback.className.replace('overflow-hidden', '');
-                        fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-white font-bold text-xs xs:text-sm">${botName.charAt(0)}</span>`;
-                      }}
+                      onError={createImageErrorHandler(botImage, botName)}
                     />
                   </div>
                   <div className="bg-white rounded-xl xs:rounded-2xl p-2.5 xs:p-3 sm:p-4 shadow-md max-w-[92%] xs:max-w-[90%] sm:max-w-[85%] border border-gray-100">
@@ -846,12 +896,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
                       src={botImage} 
                       alt={botName}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.parentElement;
-                        fallback.className = fallback.className.replace('overflow-hidden', '');
-                        fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-white font-bold text-xs xs:text-sm">${botName.charAt(0)}</span>`;
-                      }}
+                      onError={createImageErrorHandler(botImage, botName)}
                     />
                   </div>
                   <div className="bg-white rounded-xl xs:rounded-2xl p-3 xs:p-4 sm:p-5 shadow-md max-w-[92%] xs:max-w-[90%] sm:max-w-[85%] border border-gray-100 text-center">
@@ -888,12 +933,7 @@ const BookingBot = ({ isOpen: externalIsOpen, onClose: externalOnClose, botName:
                     src={botImage} 
                     alt={botName}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      const fallback = e.target.parentElement;
-                      fallback.className = fallback.className.replace('overflow-hidden', '');
-                      fallback.innerHTML = `<span class="flex items-center justify-center w-full h-full text-white font-bold text-sm">${botName.charAt(0)}</span>`;
-                    }}
+                    onError={createImageErrorHandler(botImage, botName)}
                   />
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">

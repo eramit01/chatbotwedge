@@ -17,7 +17,7 @@ const blankSpa = {
   spaId: "",
   spaName: "",
   botName: "Ava",
-  botImage: "",
+  botImage: null,
   offer: "",
   colors: { primary: "#8b5cf6", secondary: "#f5f3ff" },
   services: [],
@@ -29,6 +29,7 @@ const Spas = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [selectedSpa, setSelectedSpa] = useState(null);
   const [formState, setFormState] = useState(blankSpa);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   const { data: spas = [], isLoading } = useQuery({
     queryKey: ["spas"],
@@ -51,6 +52,21 @@ const Spas = () => {
       queryClient.invalidateQueries(["spas"]);
       setFormOpen(false);
       setFormState(blankSpa);
+      setErrorMessage(null);
+    },
+    onError: (error) => {
+      console.error("Error saving spa:", error);
+      const errorMsg = error.response?.data?.message || error.message || "Failed to save spa";
+      setErrorMessage(errorMsg);
+      
+      // Also log to console for debugging
+      if (error.response?.status === 401) {
+        setErrorMessage("Authentication failed. Please log in again.");
+      } else if (error.response?.status === 400) {
+        setErrorMessage(`Validation error: ${errorMsg}`);
+      } else if (error.response?.status === 409) {
+        setErrorMessage(`Spa ID already exists. Please use a different Spa ID.`);
+      }
     },
   });
 
@@ -84,7 +100,12 @@ const Spas = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    saveSpa.mutate(formState);
+    // Sanitize botImage: convert empty string to null before sending
+    const sanitizedState = { ...formState };
+    if (sanitizedState.botImage === "" || (sanitizedState.botImage && sanitizedState.botImage.trim() === "")) {
+      sanitizedState.botImage = null;
+    }
+    saveSpa.mutate(sanitizedState);
   };
 
   const handleChange = (field, value) => {
@@ -146,6 +167,15 @@ const Spas = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+              {errorMessage && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                  <p className="font-semibold">Error saving spa:</p>
+                  <p>{errorMessage}</p>
+                  <p className="mt-2 text-xs">
+                    Common issues: Not logged in, Spa ID already exists, or missing required fields.
+                  </p>
+                </div>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-slate-600">
@@ -186,9 +216,10 @@ const Spas = () => {
                     Bot Image URL
                   </label>
                   <input
-                    value={formState.botImage}
+                    value={formState.botImage || ""}
                     onChange={(e) => handleChange("botImage", e.target.value)}
                     className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none"
+                    placeholder="https://example.com/image.png or leave empty for default"
                   />
                 </div>
                 <div>
