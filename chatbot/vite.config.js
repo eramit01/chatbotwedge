@@ -6,14 +6,15 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
-      input: {
-        main: resolve(__dirname, "index.html"),
-        bot: resolve(__dirname, "src/bot.js"),
-      },
-      output: {
-        entryFileNames: (chunk) =>
-          chunk.name === "bot" ? "bot.js" : "assets/[name]-[hash].js",
-      },
+      input: resolve(__dirname, "index.html"),
+    },
+    // Ensure bot.js is built as a standalone script
+    minify: "esbuild",
+  },
+  // Ensure proper MIME type for bot.js
+  server: {
+    headers: {
+      "Content-Type": "application/javascript; charset=utf-8",
     },
   },
 });
