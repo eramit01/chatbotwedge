@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Integration Test - Spa Bot Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .info-box p {
+            margin: 8px 0;
+            color: #555;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .test-section ul {
+            margin-left: 20px;
+            color: #555;
+        }
+        .test-section li {
+            margin: 8px 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .scroll-indicator {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+        .content-section {
+            margin: 40px 0;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .content-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .content-section p {
+            margin: 15px 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Bot Integration Test Page</h1>
+        <p class="subtitle">This page tests the Spa Bot widget integration. The bot should appear in the bottom-right corner.</p>
+        
+        <div class="info-box">
+            <h3>📋 Test Instructions</h3>
+            <p><strong>Expected Behavior:</strong> A bot widget should appear in the bottom-right corner of this page.</p>
+            <p><strong>To Test:</strong></p>
+            <ul>
+                <li>Look for the bot widget in the bottom-right corner</li>
+                <li>Click on the widget to open the chatbot</li>
+                <li>Try interacting with the bot</li>
+                <li>Check browser console (F12) for any errors</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>✅ Checklist</h2>
+            <ul>
+                <li>Bot widget visible in bottom-right corner <span class="status" id="widget-status">Checking...</span></li>
+                <li>Widget is clickable <span class="status" id="clickable-status">Checking...</span></li>
+                <li>Chatbot opens when clicked <span class="status" id="open-status">Pending</span></li>
+                <li>No console errors <span class="status" id="console-status">Checking...</span></li>
+                <li>Bot loads spa configuration <span class="status" id="config-status">Pending</span></li>
+            </ul>
+        </div>
+
+        <div class="content-section">
+            <h2>📝 Test Content</h2>
+            <p>This section provides content to test scrolling and ensure the bot widget remains visible and accessible.</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        </div>
+
+        <div class="content-section">
+            <h2>🔧 Integration Code</h2>
+            <p>The following code is embedded in this page to load the bot widget:</p>
+            <div class="code-block">
+&lt;script&gt;
+  const spaId = "test-spa-1"; // Replace with your actual spa ID
+  (function(){
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadBot);
+    } else {
+      loadBot();
+    }
+    
+    function loadBot() {
+      const s = document.createElement('script');
+      s.src = 'http://localhost:5174/bot.js?spa=' + spaId;
+      s.async = true;
+      document.body.appendChild(s);
+    }
+  })();
+&lt;/script&gt;
+            </div>
+            <p><strong>Note:</strong> For production, replace <code>http://localhost:5174</code> with your deployed chatbot URL.</p>
+        </div>
+
+        <div class="content-section">
+            <h2>📊 Debug Information</h2>
+            <div id="debug-info">
+                <p><strong>Page URL:</strong> <span id="page-url"></span></p>
+                <p><strong>Bot Script URL:</strong> <span id="bot-url"></span></p>
+                <p><strong>Spa ID:</strong> <span id="spa-id"></span></p>
+                <p><strong>Console Messages:</strong> <span id="console-messages">None</span></p>
+            </div>
+        </div>
+
+        <div class="scroll-indicator">
+            <p>⬇️ Scroll down to test bot widget visibility ⬇️</p>
+        </div>
+
+        <div class="content-section">
+            <h2>More Test Content</h2>
+            <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+            <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.</p>
+        </div>
+
+        <div class="content-section">
+            <h2>Additional Content</h2>
+            <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.</p>
+            <p>Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio.</p>
+        </div>
+    </div>
+
+    <!-- Bot Integration Script -->
+    <script>
+      // Configuration - Update these values
+      const spaId = "test-spa-1"; // Replace with your actual spa ID
+      const chatbotUrl = "http://localhost:5174"; // Replace with your chatbot URL
+      
+      // Debug information
+      document.getElementById('page-url').textContent = window.location.href;
+      document.getElementById('bot-url').textContent = `${chatbotUrl}/bot.js?spa=${spaId}`;
+      document.getElementById('spa-id').textContent = spaId;
+      
+      // Check for bot widget
+      function checkBotWidget() {
+        const botRoot = document.getElementById('spa-bot-root');
+        if (botRoot) {
+          document.getElementById('widget-status').textContent = '✅ Found';
+          document.getElementById('widget-status').className = 'status success';
+          document.getElementById('clickable-status').textContent = '✅ Yes';
+          document.getElementById('clickable-status').className = 'status success';
+        } else {
+          setTimeout(checkBotWidget, 1000);
+        }
+      }
+      
+      // Monitor console for errors
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      const consoleMessages = [];
+      
+      console.error = function(...args) {
+        consoleMessages.push({ type: 'error', message: args.join(' ') });
+        updateConsoleStatus();
+        originalError.apply(console, args);
+      };
+      
+      console.warn = function(...args) {
+        if (args[0] && args[0].includes && args[0].includes('[SpaBot]')) {
+          consoleMessages.push({ type: 'info', message: args.join(' ') });
+          updateConsoleStatus();
+        }
+        originalWarn.apply(console, args);
+      };
+      
+      function updateConsoleStatus() {
+        const errorCount = consoleMessages.filter(m => m.type === 'error').length;
+        if (errorCount === 0) {
+          document.getElementById('console-status').textContent = '✅ No errors';
+          document.getElementById('console-status').className = 'status success';
+        } else {
+          document.getElementById('console-status').textContent = `❌ ${errorCount} error(s)`;
+          document.getElementById('console-status').className = 'status error';
+        }
+        
+        const messages = consoleMessages.slice(-5).map(m => m.message).join('; ');
+        document.getElementById('console-messages').textContent = messages || 'None';
+      }
+      
+      // Load bot script
+      (function(){
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', loadBot);
+        } else {
+          loadBot();
+        }
+        
+        function loadBot() {
+          const s = document.createElement('script');
+          s.src = `${chatbotUrl}/bot.js?spa=${spaId}`;
+          s.async = true;
+          s.onload = function() {
+            console.log('[Test Page] Bot script loaded successfully');
+            setTimeout(checkBotWidget, 500);
+          };
+          s.onerror = function() {
+            console.error('[Test Page] Failed to load bot script');
+            document.getElementById('widget-status').textContent = '❌ Failed to load';
+            document.getElementById('widget-status').className = 'status error';
+          };
+          document.body.appendChild(s);
+        }
+      })();
+      
+      // Check console status after a delay
+      setTimeout(updateConsoleStatus, 2000);
+    </script>
+</body>
+</html>
+
